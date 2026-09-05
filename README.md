@@ -1,0 +1,60 @@
+# shell-history-lint
+
+Your shell history accumulates years of commands, and some of them are
+things you'd rather not have sitting around in plaintext: a `curl` with a
+bearer token pasted straight into the URL, a password typed after `mysql -p`,
+a `curl | bash` install script, an `rm -rf` you got lucky with. That file
+gets backed up, synced to a dotfiles repo, attached to a support ticket, or
+just read by whatever else has access to your home directory.
+
+`shell-history-lint` scans a history file line by line and reports anything
+that looks risky, with the line number so you can go fix it (or think twice
+before running it again).
+
+## Usage
+
+```
+go build -o shell-history-lint .
+
+./shell-history-lint ~/.zsh_history
+12: [error] credential-in-url: URL contains an embedded username and password
+47: [warning] inline-secret: credential-looking value written directly in a command
+203: [error] pipe-to-shell: downloading and piping straight into a shell
+```
+
+It also reads from stdin, so it works on live history without a file:
+
+```
+history | ./shell-history-lint
+```
+
+Exit code is `0` when nothing was flagged, `1` when there's at least one
+finding, `2` on a real error (bad file path, read failure).
+
+## Supported formats
+
+- Plain history: one command per line.
+- Bash extended history (`HISTTIMEFORMAT`): a `#<unix-timestamp>` comment
+  line immediately followed by the command it timestamps.
+- Zsh extended history (`EXTENDED_HISTORY`): `: <start>:<duration>;<command>`.
+
+## Why streaming matters here
+
+History files are append-only and can grow for years. The linter never
+reads the whole input into memory - it pulls one line at a time off a
+buffered reader, checks it against the rule set, and writes any findings
+immediately. Memory use stays flat whether the file is 200 lines or 2GB.
+
+## Current rules
+
+| id | severity | catches |
+|---|---|---|
+| `dangerous-rm` | error | `rm -rf` (or similar) aimed at `/`, `~`, `$HOME`, or `*` |
+| `pipe-to-shell` | error | `curl`/`wget` piped into `sh`/`bash`/`zsh` |
+| `credential-in-url` | error | a URL with `user:password@` embedded in it |
+| `inline-secret` | warning | `PASSWORD=`, `TOKEN=`, `API_KEY=`, etc. set to a literal value |
+| `chmod-world-writable` | warning | `chmod 777` / `chmod a+rwx` |
+
+## License
+
+MIT, see [LICENSE](LICENSE).
