@@ -54,6 +54,12 @@ immediately. Memory use stays flat whether the file is 200 lines or 2GB.
 | `credential-in-url` | error | a URL with `user:password@` embedded in it |
 | `inline-secret` | warning | `PASSWORD=`, `TOKEN=`, `API_KEY=`, etc. set to a literal value |
 | `chmod-world-writable` | warning | `chmod 777` / `chmod a+rwx` |
+| `aws-access-key` | error | an AWS access key ID |
+| `github-token` | error | a GitHub personal access token |
+| `slack-token` | error | a Slack bot token |
+| `google-api-key` | error | a Google API key |
+| `stripe-live-key` | error | a live Stripe secret key |
+| `anthropic-api-key` | error | an Anthropic API key |
 
 ## License
 

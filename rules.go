@@ -20,6 +20,21 @@ func (r rule) check(e Entry) *Finding {
 	return nil
 }
 
+// Vendor token formats have fixed, recognizable prefixes. Building each one
+// by concatenating two short pieces here so this file never contains a
+// contiguous string that itself resembles a live key - some of these are
+// exactly what secret-scanning services (including GitHub's own push
+// protection) watch for, and a literal match here would be a false report
+// about the tool's own source.
+var (
+	awsAccessKeyPrefix  = "AK" + "IA"
+	githubTokenPrefix   = "gh" + "p_"
+	slackBotTokenPrefix = "xox" + "b-"
+	googleAPIKeyPrefix  = "AI" + "za"
+	stripeLiveKeyPrefix = "sk_" + "live_"
+	anthropicKeyPrefix  = "sk-" + "ant-"
+)
+
 var rules = []rule{
 	{
 		id:       "dangerous-rm",
@@ -50,5 +65,41 @@ var rules = []rule{
 		severity: "error",
 		pattern:  regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9+.-]*://[^\s:/@]+:[^\s:/@]+@`),
 		message:  "URL contains an embedded username and password",
+	},
+	{
+		id:       "aws-access-key",
+		severity: "error",
+		pattern:  regexp.MustCompile(`\b` + awsAccessKeyPrefix + `[0-9A-Z]{16}\b`),
+		message:  "looks like an AWS access key ID",
+	},
+	{
+		id:       "github-token",
+		severity: "error",
+		pattern:  regexp.MustCompile(`\b` + githubTokenPrefix + `[0-9A-Za-z]{36}\b`),
+		message:  "looks like a GitHub personal access token",
+	},
+	{
+		id:       "slack-token",
+		severity: "error",
+		pattern:  regexp.MustCompile(`\b` + slackBotTokenPrefix + `[0-9A-Za-z-]{10,}\b`),
+		message:  "looks like a Slack bot token",
+	},
+	{
+		id:       "google-api-key",
+		severity: "error",
+		pattern:  regexp.MustCompile(`\b` + googleAPIKeyPrefix + `[0-9A-Za-z_-]{35}\b`),
+		message:  "looks like a Google API key",
+	},
+	{
+		id:       "stripe-live-key",
+		severity: "error",
+		pattern:  regexp.MustCompile(`\b` + stripeLiveKeyPrefix + `[0-9A-Za-z]{24,}\b`),
+		message:  "looks like a live Stripe secret key",
+	},
+	{
+		id:       "anthropic-api-key",
+		severity: "error",
+		pattern:  regexp.MustCompile(`\b` + anthropicKeyPrefix + `[0-9A-Za-z_-]{20,}\b`),
+		message:  "looks like an Anthropic API key",
 	},
 }
