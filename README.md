@@ -38,6 +38,17 @@ finding, `2` on a real error (bad file path, read failure).
   line immediately followed by the command it timestamps.
 - Zsh extended history (`EXTENDED_HISTORY`): `: <start>:<duration>;<command>`.
 
+By default the linter looks at each line and figures out which of these it
+is. That's almost always right, but the two timestamped formats can be
+ambiguous - a plain bash command that starts with `: 123:456;` (`:` is a
+real no-op builtin) reads as a zsh timestamp, and a literal `#1700000000`
+command in a zsh history reads as a bash one. Pass `--format bash` or
+`--format zsh` to skip the guessing and parse strictly as one or the other:
+
+```
+./shell-history-lint --format zsh ~/.zsh_history
+```
+
 ## Why streaming matters here
 
 History files are append-only and can grow for years. The linter never

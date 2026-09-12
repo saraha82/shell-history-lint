@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -13,10 +14,23 @@ func main() {
 // run does the actual work and returns a process exit code, so tests (later)
 // can call it without touching the real stdio or os.Exit.
 func run(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("shell-history-lint", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	formatFlag := fs.String("format", "auto", "history format to parse: auto, bash, or zsh")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+
+	format, err := ParseFormat(*formatFlag)
+	if err != nil {
+		fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
+		return 2
+	}
+
 	var in io.Reader
 
-	if len(args) > 0 {
-		f, err := os.Open(args[0])
+	if rest := fs.Args(); len(rest) > 0 {
+		f, err := os.Open(rest[0])
 		if err != nil {
 			fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
 			return 2
@@ -27,7 +41,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		in = os.Stdin
 	}
 
-	count, err := Lint(in, stdout)
+	count, err := Lint(in, stdout, format)
 	if err != nil {
 		fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
 		return 2
