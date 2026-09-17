@@ -17,6 +17,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("shell-history-lint", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	formatFlag := fs.String("format", "auto", "history format to parse: auto, bash, or zsh")
+	configFlag := fs.String("config", "", "path to a JSON config file for enabling/disabling and tuning rules")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -25,6 +26,20 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
 		return 2
+	}
+
+	activeRules := rules
+	if *configFlag != "" {
+		cfg, err := LoadConfig(*configFlag)
+		if err != nil {
+			fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
+			return 2
+		}
+		activeRules, err = cfg.Apply(rules)
+		if err != nil {
+			fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
+			return 2
+		}
 	}
 
 	var in io.Reader
@@ -41,7 +56,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		in = os.Stdin
 	}
 
-	count, err := Lint(in, stdout, format)
+	count, err := Lint(in, stdout, format, activeRules)
 	if err != nil {
 		fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
 		return 2

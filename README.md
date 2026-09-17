@@ -49,6 +49,29 @@ command in a zsh history reads as a bash one. Pass `--format bash` or
 ./shell-history-lint --format zsh ~/.zsh_history
 ```
 
+## Config file
+
+By default every rule below runs at its listed severity. To disable specific
+rules or change their severity, pass `--config` with a JSON file:
+
+```json
+{
+  "disable": ["chmod-world-writable"],
+  "severity": {
+    "inline-secret": "error"
+  }
+}
+```
+
+```
+./shell-history-lint --config ~/.histlintrc.json ~/.zsh_history
+```
+
+`disable` is a list of rule ids to skip entirely. `severity` maps a rule id
+to `"error"` or `"warning"`, overriding its default. Referencing a rule id
+that doesn't exist, or a severity other than those two values, is an error -
+that's almost always a typo in the config, not intentional.
+
 ## Why streaming matters here
 
 History files are append-only and can grow for years. The linter never

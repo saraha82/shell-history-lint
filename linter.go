@@ -64,8 +64,10 @@ type Finding struct {
 // as they're discovered. It only ever holds the current line in memory
 // (plus bufio's read-ahead chunk), so it's safe to point at a history file
 // of any size without pre-loading it. format controls which timestamp
-// convention is recognized; FormatAuto tries both.
-func Lint(r io.Reader, w io.Writer, format Format) (int, error) {
+// convention is recognized; FormatAuto tries both. rules is the active rule
+// set - pass the package-level rules for the defaults, or a Config-filtered
+// subset.
+func Lint(r io.Reader, w io.Writer, format Format, rules []rule) (int, error) {
 	reader := bufio.NewReaderSize(r, 64*1024)
 	lineNum := 0
 	var pendingTimestamp int64
