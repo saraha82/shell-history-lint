@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"regexp"
@@ -53,11 +54,50 @@ type Entry struct {
 }
 
 // Finding is a single rule violation tied to the line it came from.
+// The command text is left out on purpose: it is the thing that matched a
+// secret rule, and copying it into CI logs would just move the leak.
 type Finding struct {
-	Line     int
-	Rule     string
-	Severity string
-	Message  string
+	Line      int    `json:"line"`
+	Rule      string `json:"rule"`
+	Severity  string `json:"severity"`
+	Message   string `json:"message"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+}
+
+// Output selects how findings are written.
+type Output int
+
+const (
+	OutputText Output = iota
+	// OutputJSON writes one JSON object per line (JSON Lines) rather than a
+	// single array, so findings can still be emitted as they're found
+	// without buffering the whole result.
+	OutputJSON
+)
+
+// ParseOutput validates the --output flag value.
+func ParseOutput(s string) (Output, error) {
+	switch s {
+	case "", "text":
+		return OutputText, nil
+	case "json":
+		return OutputJSON, nil
+	default:
+		return OutputText, fmt.Errorf("unknown output %q (want text or json)", s)
+	}
+}
+
+func writeFinding(w io.Writer, out Output, f *Finding) error {
+	if out == OutputJSON {
+		b, err := json.Marshal(f)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(w, "%s\n", b)
+		return err
+	}
+	_, err := fmt.Fprintf(w, "%d: [%s] %s: %s\n", f.Line, f.Severity, f.Rule, f.Message)
+	return err
 }
 
 // Lint reads a history stream one line at a time and writes findings to w
@@ -66,8 +106,8 @@ type Finding struct {
 // of any size without pre-loading it. format controls which timestamp
 // convention is recognized; FormatAuto tries both. rules is the active rule
 // set - pass the package-level rules for the defaults, or a Config-filtered
-// subset.
-func Lint(r io.Reader, w io.Writer, format Format, rules []rule) (int, error) {
+// subset. out picks plain text or JSON Lines for the findings.
+func Lint(r io.Reader, w io.Writer, format Format, out Output, rules []rule) (int, error) {
 	reader := bufio.NewReaderSize(r, 64*1024)
 	lineNum := 0
 	var pendingTimestamp int64
@@ -118,7 +158,9 @@ func Lint(r io.Reader, w io.Writer, format Format, rules []rule) (int, error) {
 		if strings.TrimSpace(entry.Command) != "" {
 			for _, rl := range rules {
 				if f := rl.check(entry); f != nil {
-					fmt.Fprintf(w, "%d: [%s] %s: %s\n", f.Line, f.Severity, f.Rule, f.Message)
+					if err := writeFinding(w, out, f); err != nil {
+						return total, err
+					}
 					total++
 				}
 			}

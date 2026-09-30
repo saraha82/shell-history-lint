@@ -49,6 +49,22 @@ command in a zsh history reads as a bash one. Pass `--format bash` or
 ./shell-history-lint --format zsh ~/.zsh_history
 ```
 
+## JSON output
+
+`--output json` prints one JSON object per finding, one per line, for
+editors and CI to consume:
+
+```
+./shell-history-lint --output json ~/.zsh_history
+{"line":12,"rule":"credential-in-url","severity":"error","message":"URL contains an embedded username and password","timestamp":1700000000}
+```
+
+`timestamp` is the unix time from the history entry and is left out when the
+file doesn't carry one. The command text is never included, since the
+matching lines are the ones most likely to contain a secret. Output is JSON
+Lines rather than an array so findings still appear as they are found.
+The exit codes are the same as in text mode.
+
 ## Config file
 
 By default every rule below runs at its listed severity. To disable specific

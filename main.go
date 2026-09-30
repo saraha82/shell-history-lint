@@ -18,7 +18,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	formatFlag := fs.String("format", "auto", "history format to parse: auto, bash, or zsh")
 	configFlag := fs.String("config", "", "path to a JSON config file for enabling/disabling and tuning rules")
+	outputFlag := fs.String("output", "text", "how to print findings: text or json (one object per line)")
 	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+
+	output, err := ParseOutput(*outputFlag)
+	if err != nil {
+		fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
 		return 2
 	}
 
@@ -56,7 +63,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		in = os.Stdin
 	}
 
-	count, err := Lint(in, stdout, format, activeRules)
+	count, err := Lint(in, stdout, format, output, activeRules)
 	if err != nil {
 		fmt.Fprintf(stderr, "shell-history-lint: %v\n", err)
 		return 2

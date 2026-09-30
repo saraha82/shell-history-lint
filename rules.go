@@ -15,7 +15,7 @@ type rule struct {
 
 func (r rule) check(e Entry) *Finding {
 	if r.pattern.MatchString(e.Command) {
-		return &Finding{Line: e.Line, Rule: r.id, Severity: r.severity, Message: r.message}
+		return &Finding{Line: e.Line, Rule: r.id, Severity: r.severity, Message: r.message, Timestamp: e.Timestamp}
 	}
 	return nil
 }
